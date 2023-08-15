@@ -1,0 +1,20 @@
+
+<blockquote>
+A blockquote is a block-level element that has WikiText inside.
+
+Possibly multiple paragraphs.
+</blockquote>
+
+Other block-level macros have a function oriented nature and will be handed their contents without wikkly processing:
+
+<bibtex>
+@book{James198,
+      author = "Henry James",
+      title = "The Turn of the Screw",
+      publisher = "Penguin Book, New York",
+      year = "1994 (First published 1898)"
+}
+</bibtex>
+
+
+Some (HTML-) tags are inline like this <s>strikethrough</s> example. Some of these may be combined with inline markup like this <u>Underline ''and'' italic!</u>. Others are more function oriented macros that are handed raw contents for processing like this <cite page="12">James198</cite>.
