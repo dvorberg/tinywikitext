@@ -63,48 +63,5 @@ class s(TagMacro):
 class u(TagMacro):
     context = "inline"
 
-
-class bibtex(RAWMacro):
-    context = "block"
-
-    def html(self, source, **params):
-        return f'<pre>\n{repr(params)}\n\n{source.strip()}</pre>'
-
-class pre(RAWMacro):
-    context = "block"
-
-    def html(self, source, **params):
-        return f'<pre>{source.strip()}</pre>'
-
-class poem(RAWMacro):
-    context = "block"
-
-    def html(self, source, **params):
-        return f'<pre>\n{repr(params)}\n\n{source.strip()}</pre>'
-
-class DPL(RAWMacro):
-    context = "block"
-
-    def html(self, source, **params):
-        """
-        I don’t even know whats this does.
-        """
-        return None
-
-class gallery(RAWMacro):
-    context = "block"
-
-    def html(self, source, **params):
-        return None
-
-class ref(TagMacro):
-    context = "inline"
-
-    def start_tag(self, *args, **kw):
-        return html_start_tag("span", class_="subdued") + "("
-
-    def end_tag(self):
-        return ")</span>"
-
 macro_library = MacroLibrary()
 macro_library.register_module(globals())
