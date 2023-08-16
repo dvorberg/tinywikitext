@@ -31,6 +31,7 @@ wikitext_base_lexer = ply.lex.lex(module=lextokens,
                                   optimize=False,
                                   lextab=None)
 
+defterm_is_next_re = re.compile(lextokens.t_definition_term.__doc__)
 class WikiTextParser(Parser):
     """
     Base class for content parser showing the required API.
@@ -64,9 +65,13 @@ class WikiTextParser(Parser):
 
 
         self.current_heading_level = None
+
         self.previous_list_item = None
         self.current_list_item = None
+
         self.tag_macro_stack = []
+
+        self.in_definition = None
 
         self.in_paragraph = False
         def paragraph_break():
@@ -87,9 +92,13 @@ class WikiTextParser(Parser):
                 self.in_paragraph = False
 
         def ensure_paragraph():
+            if self.in_definition == "list":
+                raise InternalError("Can’t put contents in a definition list.",
+                                    location=self.lexer.location)
             if not self.in_paragraph \
                      and self.current_list_item is None \
-                     and self.current_heading_level is None:
+                     and self.current_heading_level is None \
+                     and not self.in_definition in { "term", "def", }:
                 compiler.begin_paragraph()
                 self.in_paragraph = True
 
@@ -151,24 +160,6 @@ class WikiTextParser(Parser):
                     text, target = token.value
                     compiler.link(text, target or None)
 
-                case "eols":
-                    if token.value.count("\n") > 1:
-                        if self.current_list_item is None:
-                            paragraph_break()
-                        else:
-                            compiler.end_list_item()
-                            compiler.finalize_list()
-                            self.previous_list_item = None
-                            self.current_list_item = None
-                    else:
-                        if self.current_list_item is not None:
-                            compiler.end_list_item()
-                            self.previous_list_item = self.current_list_item
-                            self.current_list_item = None
-                        else:
-                            # Single newlines are still whitespace.
-                            compiler.characters(" ")
-
                 case "hr":
                     compiler.horizontal_line()
 
@@ -189,8 +180,6 @@ class WikiTextParser(Parser):
 
                     compiler.begin_list_item(signature)
 
-                    # import pdb ; pdb.set_trace()
-
                     if self.previous_list_item is not None:
                         # List item signature must match according
                         # to the shorter of the two. You cannot, for example,
@@ -207,6 +196,26 @@ class WikiTextParser(Parser):
                                 location=Location.from_lextoken(token))
 
                     self.current_list_item = signature
+
+                case "definition_term":
+                    if self.in_definition is None:
+                        compiler.begin_definition_list()
+                        # self.in_definition = "list"
+
+                    compiler.begin_definition_term()
+                    self.in_definition = "term"
+
+                case "definition_def":
+                    if self.in_definition is None:
+                        raise ParseError(
+                            "A definition must always follow a term.",
+                            location=Location.from_lextoken(token))
+
+                    # The definition_term is terminated by a newline
+                    # compiler.end_definition_term() is called when
+                    # handling a single eol below.
+                    compiler.begin_definition_def()
+                    self.in_definition = "def"
 
                 case "heading_start":
                     paragraph_break()
@@ -291,6 +300,45 @@ class WikiTextParser(Parser):
 
                 case "whitespace":
                     compiler.characters(" ")
+
+                case "eols":
+                    # Definition lists may be terminated by any number
+                    # of newlines.
+                    if self.in_definition == "term":
+                        compiler.end_definition_term()
+                        self.in_definition = "list"
+
+                    elif self.in_definition == "def":
+                        compiler.end_definition_def()
+
+                        # Perform a look-ahead: if there is a new term
+                        # comming up, do not close the definition list.
+
+                        remainder = self.lexer.remainder
+                        if defterm_is_next_re.match(remainder) is None:
+                            compiler.end_definition_list()
+                            self.in_definition = None
+                        else:
+                            self.in_definition = "list"
+
+                    if token.value.count("\n") == 1:
+                        # Single newline.
+                        if self.in_definition == "term":
+                            compiler.end_definition_term()
+                            self.in_definition = "list"
+                        else:
+                            # Single newlines are still whitespace.
+                            compiler.characters(" ")
+
+                    else:
+                        # Double newline.
+                        if self.current_list_item is None:
+                            paragraph_break()
+                        else:
+                            compiler.end_list_item()
+                            compiler.finalize_list()
+                            self.previous_list_item = None
+                            self.current_list_item = None
 
                 case "word" | "text":
                     ensure_paragraph()
