@@ -113,7 +113,7 @@ def t_comment(t):
 t_br =  r"<br\s*/?>"
 
 def t_link(t):
-    r"\[\[(?P<link_text>.+?)(?:\|(?P<link_target>.+?))?\]\]"
+    r"\[\[(?P<link_text>[^:]+?)(?:\|(?P<link_target>[^:]+?))?\]\]"
     t.value = groups(t, "link_text", "link_target")
     return t
 
