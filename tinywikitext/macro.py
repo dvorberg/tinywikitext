@@ -12,6 +12,7 @@
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 # GNU General Public License for more details.
 
+from tinymarkup.exceptions import UnsuitableMacro
 from tinymarkup.macro import Macro, MacroLibrary
 from tinymarkup.utils import html_start_tag
 
@@ -25,20 +26,11 @@ class TagMacro(Macro):
     through the tag’s attributes which allows you to basically write
     HTML tags into your Wiki Text.
     """
-    context = None # either "block" or "inline"
-
     def start_tag(self, *args, **kw):
         return html_start_tag(self.name, **kw)
 
     def end_tag(self):
         return f"</{self.name}>"
-
-    @property
-    def end(self):
-        if self.__class__.context == "block":
-            return "\n"
-        else:
-            return ""
 
 class RAWMacro(Macro):
     """
@@ -46,22 +38,24 @@ class RAWMacro(Macro):
     end tag themselves. These are handed only one argument, the source,
     and the opening tag’s attributes as keyword parameters.
     """
-    context = None # "block" or "inline"
-
     def html(self, source, **params):
         raise NotImplementedError()
 
+class LinkMacro(Macro):
+    def html(self, *params):
+        raise NotImplementedError()
+
 class blockquote(TagMacro):
-    context = "block"
+    environments = { "block" }
 
 class div(TagMacro):
-    context = "block"
+    environments = { "block" }
 
 class s(TagMacro):
-    context = "inline"
+    environments = { "inline" }
 
 class u(TagMacro):
-    context = "inline"
+    environments = { "inline" }
 
 macro_library = MacroLibrary()
 macro_library.register_module(globals())
