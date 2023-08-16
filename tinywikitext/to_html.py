@@ -47,6 +47,13 @@ class HTMLCompiler(WikiTextCompiler, HTMLCompiler_mixin):
     def horizontal_line(self): self.print("<hr />")
     def begin_heading(self, level:int): self.open(f"h{level}")
     def end_heading(self, level:int): self.close(f"h{level}")
+    def begin_definition_list(self): self.open("dl")
+    def end_definition_list(self): self.close("dl")
+    def begin_definition_term(self): self.open("dt")
+    def end_definition_term(self): self.close("dt")
+    def begin_definition_def(self): self.open("dd")
+    def end_definition_def(self): self.close("dd")
+
 
     def link(self, text, target):
         if not target:
