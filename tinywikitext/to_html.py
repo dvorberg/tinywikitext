@@ -61,7 +61,8 @@ class HTMLCompiler(WikiTextCompiler, HTMLCompiler_mixin):
         if not target:
             target = text
 
-        self.open("a", href=target)
+        href = self.context.link_target_to_href(target)
+        self.open("a", href=href)
         self.print(text, end="")
         self.close("a")
 
@@ -90,6 +91,9 @@ class HTMLCompiler(WikiTextCompiler, HTMLCompiler_mixin):
 
     def process_raw_macro(self, macro, source, params):
         self.print(macro.html(source, **params), end="")
+
+    def process_link_macro(self, macro, params):
+        self.print(macro.html(*params), end="")
 
 class Item(object):
     def __init__(self, parent):
