@@ -24,7 +24,7 @@ from tinymarkup.utils import parse_tag_params
 
 from .compiler import WikiTextCompiler
 from . import lextokens
-from .macro import TagMacro, RAWMacro
+from .macro import TagMacro, RAWMacro, LinkMacro
 
 wikitext_base_lexer = ply.lex.lex(module=lextokens,
                                   reflags=re.MULTILINE|re.IGNORECASE|re.DOTALL,
@@ -38,6 +38,8 @@ class ProceduralStart:
 
 defelement_is_next_re = re.compile(r"^[;:]\s*")
 listitem_is_next_re = re.compile(lextokens.t_list_item.__doc__)
+next_is_newline_re = re.compile(r"[ \t]*\n")
+
 class WikiTextParser(Parser):
     """
     Base class for content parser showing the required API.
@@ -71,26 +73,55 @@ class WikiTextParser(Parser):
             macro_class = compiler.context.macro_library.get(
                 name, Location.from_lextoken(token))
 
-            if macro_class.context == "block" and self.in_paragraph:
-                raise UnsuitableMacro(
-                    f"{name} must be used as block-level macro "
-                    f"(it’s its own paragraph).",
-                    location=Location.from_lextoken(token))
+            end_tag = f"</{name}>"
 
-            if macro_class.context == "inline":
-                ensure_paragraph()
+            start = token.lexer.lexmatch.start()
+            previous_is_newline = (
+                start == 0 or self.lexer.base.lexdata[start-1] == "\n")
 
-            macro = macro_class(compiler.context)
+            next_is_newline = next_is_newline_re.match(
+                self.lexer.remainder) is not None
+
+            rest_of_line = self.lexer.remainder.split("\n", 1)[0]
+            endtag_on_line = rest_of_line.endswith(end_tag)
+
+            if previous_is_newline and (next_is_newline or endtag_on_line):
+                # The macro sits alone on its line.
+                environment = "block"
+            else:
+                # The macro does not sit alone on its line.
+                environment = "inline"
+
+            try:
+                macro_class.check_environment(environment)
+            except UnsuitableMacro as exc:
+                if environment == "block":
+                    # Maybe the macro likes to be part of a paragraph?
+                    ensure_paragraph()
+                    environment = "inline"
+                    macro_class.check_environment(environment)
+                else:
+                    exc.location = Location.from_lextoken(token)
+                    raise
+
+            if (token.type == "linkmacro"
+                and not issubclass(macro_class, LinkMacro)):
+                raise UnsuitableMacro(f"Macros used with the link syntax must "
+                                      f"inherit from LinkMacro "
+                                      f"(“{name}” does not.)",
+                                      location = Location.from_lextoken(token))
+
+            macro = macro_class(compiler.context, environment)
 
             if isinstance(macro, TagMacro):
-                self.tag_macro_stack.append(macro)
+                self.tag_macro_stack.append( (macro, token.lexpos,) )
                 compiler.begin_tag_macro(macro, params)
+
             elif isinstance(macro, RAWMacro):
                 # We have to go looking for the end of it,
                 # extract the source in between,
                 # move the laxpos and tell the compiler to
                 # call it.
-                end_tag = f"</{name}>"
                 try:
                     pos = self.lexer.remainder.index(end_tag)
                 except ValueError:
@@ -102,6 +133,9 @@ class WikiTextParser(Parser):
                 self.lexer.lexpos += pos + len(end_tag)
 
                 compiler.process_raw_macro(macro, source, params)
+
+            elif isinstance(macro, LinkMacro):
+                compiler.process_link_macro(macro, params)
 
 
         self.procedural_stack = []
@@ -320,7 +354,11 @@ class WikiTextParser(Parser):
 
                 case "htmltag_end":
                     tag = token.value
-                    lastopen = self.tag_macro_stack.pop()
+                    if len(self.tag_macro_stack) == 0:
+                        raise ParseError(f"Cannot close macro “{tag}”; "
+                                         f"not opened.",
+                                         location=Location.from_lextoken(token))
+                    lastopen, lexpos = self.tag_macro_stack.pop()
 
                     if lastopen.name != tag:
                         raise ParseError(f"Macro nesting error, trying to "
@@ -328,12 +366,12 @@ class WikiTextParser(Parser):
                                          f"with </{tag}>.",
                                          location=Location.from_lextoken(token))
 
-                    if lastopen.__class__.context == "block":
+                    if lastopen.environment == "block":
                         paragraph_break()
 
                     compiler.end_tag_macro(lastopen)
 
-                case "macro":
+                case "linkmacro":
                     name, params = token.value
 
                     macro_class = compiler.context.macro_library.get(
@@ -397,6 +435,12 @@ class WikiTextParser(Parser):
         # Make sure the last paragraph is closed in case
         # there is no whitespace at the end of the file.
         paragraph_break()
+
+        if len(self.tag_macro_stack) > 0:
+            lastopen, lexpos = self.tag_macro_stack[-1]
+            raise ParseError(f"Macro {lastopen.name} not closed. Started at:",
+                             location=Location.from_lexdatapos(
+                                 self.lexer.base.lexdata, lexpos))
 
         compiler.end_document()
 
