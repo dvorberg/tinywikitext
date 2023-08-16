@@ -12,11 +12,11 @@
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 # GNU General Public License for more details.
 
-import re
+import sys, re, dataclasses
 import ply.lex
 
 from tinymarkup.exceptions import (InternalError, ParseError, UnknownMacro,
-                                   Location)
+                                   Location, UnsuitableMacro)
 from tinymarkup.parser import Parser
 from tinymarkup.macro import MacroLibrary
 from tinymarkup.res import paragraph_break_re
@@ -31,7 +31,13 @@ wikitext_base_lexer = ply.lex.lex(module=lextokens,
                                   optimize=False,
                                   lextab=None)
 
-defterm_is_next_re = re.compile(lextokens.t_definition_term.__doc__)
+@dataclasses.dataclass
+class ProceduralStart:
+    name: str
+    location: Location
+
+defelement_is_next_re = re.compile(r"^[;:]\s*")
+listitem_is_next_re = re.compile(lextokens.t_list_item.__doc__)
 class WikiTextParser(Parser):
     """
     Base class for content parser showing the required API.
@@ -42,27 +48,49 @@ class WikiTextParser(Parser):
     def __init__(self):
         super().__init__(wikitext_base_lexer)
 
+    # Man, this needs to be reworked.
+    @property
+    def current_procedural(self):
+        if self.procedural_stack:
+            return self.procedural_stack[-1]
+        else:
+            return None
+
+    @property
+    def current_procedural_name(self):
+        if self.procedural_stack:
+            return self.procedural_stack[-1].name
+        else:
+            return None
+
+
     def parse(self, source:str, compiler:WikiTextCompiler):
         compiler.begin_document(self)
 
-        self.current_procedural = None
+        self.procedural_stack = []
         def begin_procedural(name):
-            if self.current_procedural is not None:
-                oldname, oldlocation = self.current_procedural
-                raise ParseError(f"Procedural markup may not nest, "
-                                 f"starting {name} while in "
-                                 f"{oldname} starting about here:",
-                                 location=oldlocation)
-            else:
-               self.current_procedural = name, self.location
+            #if self.current_procedural is not None:
+            #    oldname, oldlocation = self.current_procedural
+            #    raise ParseError(f"Procedural markup may not nest, "
+            #                     f"starting {name} while in "
+            #                     f"{oldname} starting about here:",
+            #                     location=oldlocation)
+            #else:
+            #   self.current_procedural = name, self.location
+            self.procedural_stack.append(ProceduralStart(
+                name, self.location))
 
         def end_procedural(name):
-            p, oldlocation = self.current_procedural
-            if p != name:
-                raise ParseError(f"Can’t terminate {p} with {name}.",
-                                 location=oldlocation)
-            self.current_procedural = None
-
+            #p, oldlocation = self.current_procedural
+            #if p != name:
+            #    raise ParseError(f"Can’t terminate {p} with {name}.",
+            #                     location=oldlocation)
+            #self.current_procedural = None
+            entry = self.procedural_stack.pop()
+            if entry.name != name:
+                raise ParseError(f"Procedural markup mismatch."
+                                 f"Can’t terminate {p} with {name}.",
+                                 location=entry.location)
 
         self.current_heading_level = None
 
@@ -76,16 +104,16 @@ class WikiTextParser(Parser):
         self.in_paragraph = False
         def paragraph_break():
             if self.current_procedural is not None:
-                name, location = self.current_procedural
-                raise ParseError(f"Unterminated {name}, "
+                p = self.current_procedural
+                raise ParseError(f"Unterminated {p.name}, "
                                  f"missing end about here:",
-                                 location)
+                                 p.location)
 
             if self.current_heading_level is not None:
                 level, location = self.current_heading_level
                 raise ParseError(f"Unterminated heading."
                                  f"missing end about here:",
-                                 location)
+                                 location=Location.from_lextoken(token))
 
             if self.in_paragraph:
                 compiler.end_paragraph()
@@ -95,6 +123,7 @@ class WikiTextParser(Parser):
             if self.in_definition == "list":
                 raise InternalError("Can’t put contents in a definition list.",
                                     location=self.lexer.location)
+
             if not self.in_paragraph \
                      and self.current_list_item is None \
                      and self.current_heading_level is None \
@@ -103,11 +132,12 @@ class WikiTextParser(Parser):
                 self.in_paragraph = True
 
         for token in self.lexer.tokenize(source):
+            #print("--", token)
             match token.type:
                 case "bolditalic":
                     ensure_paragraph()
 
-                    if self.current_procedural is None:
+                    if self.current_procedural_name != "bolditalic":
                         begin_procedural("bolditalic")
                         compiler.begin_bold()
                         compiler.begin_italic()
@@ -119,7 +149,7 @@ class WikiTextParser(Parser):
                 case "bold":
                     ensure_paragraph()
 
-                    if self.current_procedural is None:
+                    if self.current_procedural_name != "bold":
                         begin_procedural("bold")
                         compiler.begin_bold()
                     else:
@@ -129,7 +159,7 @@ class WikiTextParser(Parser):
                 case "italic":
                     ensure_paragraph()
 
-                    if self.current_procedural is None:
+                    if self.current_procedural_name != "italic":
                         begin_procedural("italic")
                         compiler.begin_italic()
                     else:
@@ -173,7 +203,7 @@ class WikiTextParser(Parser):
                         oldlevel = len(self.previous_list_item)
 
                     if len(signature) > oldlevel + 1:
-                        raise SyntaxError(
+                        raise ParseError(
                             "List nesting error. You may only increase the "
                             "nesting level by one per line.",
                             location=Location.from_lextoken(token))
@@ -230,14 +260,19 @@ class WikiTextParser(Parser):
                         self.current_heading_level = level, self.location
 
                 case "heading_end":
+                    if self.current_heading_level is None:
+                        raise ParseError(
+                            "Attempt to close a heading that has not been"
+                            "opened", location=Location.from_lextoken(token))
+
                     level = len(token.value)
                     oldlevel, oldlocation = self.current_heading_level
                     if oldlevel != level:
                         raise ParseError("Heading level mismatch",
                                          location=oldlocation)
-                    else:
-                        compiler.end_heading(level)
-                        self.current_heading_level = None
+
+                    compiler.end_heading(level)
+                    self.current_heading_level = None
 
                 case "htmltag_start":
                     name, params = token.value
@@ -302,8 +337,8 @@ class WikiTextParser(Parser):
                     compiler.characters(" ")
 
                 case "eols":
-                    # Definition lists may be terminated by any number
-                    # of newlines.
+                    nlcount = token.value.count("\n")
+
                     if self.in_definition == "term":
                         compiler.end_definition_term()
                         self.in_definition = "list"
@@ -313,32 +348,34 @@ class WikiTextParser(Parser):
 
                         # Perform a look-ahead: if there is a new term
                         # comming up, do not close the definition list.
-
                         remainder = self.lexer.remainder
-                        if defterm_is_next_re.match(remainder) is None:
+                        if defelement_is_next_re.match(remainder) is None:
                             compiler.end_definition_list()
                             self.in_definition = None
                         else:
                             self.in_definition = "list"
 
-                    if token.value.count("\n") == 1:
-                        # Single newline.
-                        if self.in_definition == "term":
-                            compiler.end_definition_term()
-                            self.in_definition = "list"
-                        else:
-                            # Single newlines are still whitespace.
-                            compiler.characters(" ")
+                    elif self.current_list_item is not None:
+                        compiler.end_list_item()
 
-                    else:
-                        # Double newline.
-                        if self.current_list_item is None:
-                            paragraph_break()
-                        else:
-                            compiler.end_list_item()
+                        # Perform a look-ahead: if there is a new term
+                        # comming up, do not close the definition list.
+                        remainder = self.lexer.remainder
+                        if listitem_is_next_re.match(remainder) is None \
+                              or nlcount > 1:
                             compiler.finalize_list()
                             self.previous_list_item = None
                             self.current_list_item = None
+                        else:
+                            self.previous_list_item = self.current_list_item
+                            self.current_list_item = None
+
+                    elif nlcount == 1:
+                        # Single newlines are still whitespace.
+                        compiler.characters(" ")
+                    else:
+                        # Double newline.
+                        paragraph_break()
 
                 case "word" | "text":
                     ensure_paragraph()
