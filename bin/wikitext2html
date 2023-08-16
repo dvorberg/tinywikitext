@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/Users/diedrich/t4wiki/virtualenv.nosync.noindex/bin/python
 
 import sys, time, argparse, pathlib
 
