@@ -67,6 +67,43 @@ class WikiTextParser(Parser):
     def parse(self, source:str, compiler:WikiTextCompiler):
         compiler.begin_document(self)
 
+        def process_macro_call(token, name, params):
+            macro_class = compiler.context.macro_library.get(
+                name, Location.from_lextoken(token))
+
+            if macro_class.context == "block" and self.in_paragraph:
+                raise UnsuitableMacro(
+                    f"{name} must be used as block-level macro "
+                    f"(it’s its own paragraph).",
+                    location=Location.from_lextoken(token))
+
+            if macro_class.context == "inline":
+                ensure_paragraph()
+
+            macro = macro_class(compiler.context)
+
+            if isinstance(macro, TagMacro):
+                self.tag_macro_stack.append(macro)
+                compiler.begin_tag_macro(macro, params)
+            elif isinstance(macro, RAWMacro):
+                # We have to go looking for the end of it,
+                # extract the source in between,
+                # move the laxpos and tell the compiler to
+                # call it.
+                end_tag = f"</{name}>"
+                try:
+                    pos = self.lexer.remainder.index(end_tag)
+                except ValueError:
+                    raise ParseError(
+                        f"Unterminated <{name}> macro",
+                        location=Location.from_lextoken(token))
+
+                source = self.lexer.remainder[:pos]
+                self.lexer.lexpos += pos + len(end_tag)
+
+                compiler.process_raw_macro(macro, source, params)
+
+
         self.procedural_stack = []
         def begin_procedural(name):
             #if self.current_procedural is not None:
@@ -277,43 +314,9 @@ class WikiTextParser(Parser):
                 case "htmltag_start":
                     name, params = token.value
                     # Parse those params!
-
                     params = parse_tag_params(params)
 
-                    macro_class = compiler.context.macro_library.get(
-                        name, Location.from_lextoken(token))
-
-                    if macro_class.context == "block" and self.in_paragraph:
-                        raise UnsuitableMacro(
-                            f"{name} must be used as block-level macro "
-                            f"(it’s its own paragraph).",
-                            location=Location.from_lextoken(token))
-
-                    if macro_class.context == "inline":
-                        ensure_paragraph()
-
-                    macro = macro_class(compiler.context)
-
-                    if issubclass(macro_class, TagMacro):
-                        self.tag_macro_stack.append(macro)
-                        compiler.begin_tag_macro(macro, params)
-                    elif issubclass(macro_class, RAWMacro):
-                        # We have to go looking for the end of it,
-                        # extract the source in between,
-                        # move the laxpos and tell the compiler to
-                        # call it.
-                        end_tag = f"</{name}>"
-                        try:
-                            pos = self.lexer.remainder.index(end_tag)
-                        except ValueError:
-                            raise ParseError(
-                                f"Unterminated <{name}> macro",
-                                location=Location.from_lextoken(token))
-
-                        source = self.lexer.remainder[:pos]
-                        self.lexer.lexpos += pos + len(end_tag)
-
-                        compiler.process_raw_macro(macro, source, params)
+                    process_macro_call(token, name, params)
 
                 case "htmltag_end":
                     tag = token.value
@@ -331,7 +334,17 @@ class WikiTextParser(Parser):
                     compiler.end_tag_macro(lastopen)
 
                 case "macro":
-                    self.process_macro_call(token)
+                    name, params = token.value
+
+                    macro_class = compiler.context.macro_library.get(
+                        name, Location.from_lextoken(token))
+
+                    if params:
+                        params = params.split("|")
+                    else:
+                        params = []
+
+                    process_macro_call(token, name, params)
 
                 case "whitespace":
                     compiler.characters(" ")
