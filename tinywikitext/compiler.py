@@ -93,3 +93,6 @@ class WikiTextCompiler(Compiler):
         print("process_raw_macro")
         print(source)
         print("-"*60)
+
+    def process_link_macro(self, macro, params):
+        print("process_raw_macro", repr(macro), repr(params))
