@@ -12,14 +12,16 @@
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 # GNU General Public License for more details.
 
-import sys, io
+import sys, os, io, copy
 
 from tinymarkup.compiler import HTMLCompiler_mixin
 from tinymarkup.context import Context
 from tinymarkup.exceptions import InternalError
+from tinymarkup.cmdline import CmdlineTool
 
 from .compiler import WikiTextCompiler
 from .parser import WikiTextParser
+from .macro import macro_library
 
 def to_html(output, wikitext, context:Context=None):
     parser = WikiTextParser()
@@ -62,9 +64,6 @@ class HTMLCompiler(WikiTextCompiler, HTMLCompiler_mixin):
         self.open("a", href=target)
         self.print(text, end="")
         self.close("a")
-
-    def call_macro(self, name, params):
-        print("call_macro", repr(name), repr(params))
 
     def begin_list_item(self, signature):
         try:
@@ -200,3 +199,17 @@ class ListManager(object):
     def finalize(self):
         self.compiler.output = self.original_output
         self.root.write_to(self.compiler)
+
+class CmdlineTool(CmdlineTool):
+    def default_context(self):
+        return Context(macro_library)
+
+    def to_html(self, outfile, source):
+        return to_html(outfile, source, self.context)
+
+def cmdline_main(context:Context=None):
+    cmdline_tool = CmdlineTool(context)
+    cmdline_tool()
+
+if __name__ == "__main__":
+    cmdline_main()
