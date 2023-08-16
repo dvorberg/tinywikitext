@@ -42,6 +42,13 @@
 # • Lists
 #   * Bullet list
 #   # Numbered list
+# • Definition lists
+#   ; Term
+#   : Definition
+#
+#   In WikiText these can be nested with regular lists. I didn't know that
+#   and didn’t implement it that way, though it’s possible.
+#
 # • Headings
 #   = h1 =
 #   == h2 ==
