@@ -65,6 +65,24 @@ class WikiTextCompiler(Compiler):
     def finalize_list(self):
         print("finalize_list")
 
+    def begin_definition_list(self):
+        print("begin_definition_list")
+
+    def end_definition_list(self):
+        print("end_definition_list")
+
+    def begin_definition_term(self):
+        print("begin_definition_term")
+
+    def end_definition_term(self):
+        print("finalize_list")
+
+    def begin_definition_def(self):
+        print("end_definition_term")
+
+    def end_definition_def(self):
+        print("end_definition_def")
+
     def begin_tag_macro(self, macro, params):
         print("begin_tag_macro", repr(macro), repr(params))
 
