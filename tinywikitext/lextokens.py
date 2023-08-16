@@ -70,7 +70,7 @@ tokens = (
     "comment",
     "br",
     "link",
-    "macro",
+    "linkmacro",
 
     "eols",
 
@@ -113,12 +113,13 @@ def t_comment(t):
 t_br =  r"<br\s*/?>"
 
 def t_link(t):
-    r"\[\[(?P<link_text>[^:]+?)(?:\|(?P<link_target>[^:]+?))?\]\]"
+    (r"\[\[(?P<link_text>(?:https?:|ftp:)?[^:]+?)"
+     r"(?:\|(?P<link_target>[^:]+?))?\]\]")
     t.value = groups(t, "link_text", "link_target")
     return t
 
-def t_macro(t):
-    r"\[\[(?P<macro_name>[^\d\W]\w+):(?P<macro_params>.*)\]\]"
+def t_linkmacro(t):
+    r"\[\[(?P<macro_name>[^\d\W]\w+):(?P<macro_params>.*?)\]\]"
     t.value = groups(t, "macro_name", "macro_params")
     return t
 
