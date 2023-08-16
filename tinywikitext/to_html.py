@@ -72,8 +72,9 @@ class HTMLCompiler(WikiTextCompiler, HTMLCompiler_mixin):
                 self.current_list = ListManager(self)
             self.current_list.begin_list_item(signature)
         except AssertionError as exc:
-            raise InternalError("", location=self.parser.location) from exc
-
+            raise InternalError(
+                "List mechanism failed internally.",
+                location=self.parser.location) from exc
 
     def end_list_item(self):
         pass
