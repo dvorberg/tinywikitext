@@ -70,6 +70,9 @@ tokens = (
     "hr",
     "list_item",
 
+    "definition_term",
+    "definition_def",
+
     "heading_start",
     "heading_end",
 
@@ -123,6 +126,16 @@ def t_list_item(t):
     r"^(?P<listitem_intro>[\*#]+)\s*"
     # (?=\w) makes sure a word follows (look ahead)
     t.value = group(t, "listitem_intro")
+    return t
+
+def t_definition_term(t):
+    r"^;\s*"
+    t.value = t.value.strip()
+    return t
+
+def t_definition_def(t):
+    r"^:\s*"
+    t.value = t.value.strip()
     return t
 
 def t_heading_start(t):
