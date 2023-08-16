@@ -1,11 +1,19 @@
 [[Bild:image.jpg]]
 
+May also be used inline: [[Bild:image.jpg]].
+
+<s>May not be used block.</s>
+
+May not be
 
 <blockquote>
 A blockquote is a block-level element that has WikiText inside.
 
 Possibly multiple paragraphs.
 </blockquote>
+
+<blockquote>Block level macros may be used on one line, if both start and end tag are on the same line.</blockquote>
+
 
 Other block-level macros have a function oriented nature and will be handed their contents without wikkly processing:
 
@@ -19,4 +27,4 @@ Other block-level macros have a function oriented nature and will be handed thei
 </bibtex>
 
 
-Some (HTML-) tags are inline like this <s>strikethrough</s> example. Some of these may be combined with inline markup like this <u>Underline ''and'' italic!</u>. Others are more function oriented macros that are handed raw contents for processing like this <cite page="12">James198</cite>.
+Some (HTML-) tags are inline like this <s>strikethrough</s> example. Some of these may be combined with inline markup like this <u>Underline ''and'' italic!</u>. Others are more function oriented macros that are handed raw contents for processing like this <!--cite page="12">James198</cite-->.
