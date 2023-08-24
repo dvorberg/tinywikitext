@@ -13,6 +13,7 @@
 # GNU General Public License for more details.
 
 import sys, os, io, copy
+from html import escape as escape_html
 
 from tinymarkup.compiler import HTMLCompiler_mixin
 from tinymarkup.context import Context
@@ -30,15 +31,17 @@ def to_html(output, wikitext, context:Context=None):
 
 class HTMLCompiler(WikiTextCompiler, HTMLCompiler_mixin):
     def __init__(self, context, output):
-        super().__init__(context)
-        self.output = output
+        WikiTextCompiler.__init__(self, context)
+        HTMLCompiler_mixin.__init__(self, output)
 
     def begin_document(self, lexer):
         super().begin_document(lexer)
         self.begin_html_document()
         self.current_list = None
 
-    def characters(self, s:str): self.print(s, end="")
+    def characters(self, s:str):
+        self.print(escape_html(s), end="")
+
     def line_break(self): self.print("<br />", end="")
     def begin_paragraph(self): self.open("p")
     def end_paragraph(self): self.close("p")
