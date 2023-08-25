@@ -24,10 +24,12 @@ from .compiler import WikiTextCompiler
 from .parser import WikiTextParser
 from .macro import macro_library
 
-def to_html(output, wikitext, context:Context=None):
+def to_html(wikitext, context:Context=None):
+    outfile = io.StringIO()
     parser = WikiTextParser()
-    compiler = HTMLCompiler(context, output)
+    compiler = HTMLCompiler(context, outfile)
     compiler.compile(parser, wikitext)
+    return outfile.getvalue()
 
 class HTMLCompiler(WikiTextCompiler, HTMLCompiler_mixin):
     def __init__(self, context, output):
@@ -59,15 +61,8 @@ class HTMLCompiler(WikiTextCompiler, HTMLCompiler_mixin):
     def begin_definition_def(self): self.open("dd")
     def end_definition_def(self): self.close("dd")
 
-
     def link(self, text, target):
-        if not target:
-            target = text
-
-        href = self.context.link_target_to_href(target)
-        self.open("a", href=href)
-        self.print(text, end="")
-        self.close("a")
+        self.print(self.context.html_link_element(target, text))
 
     def begin_list_item(self, signature):
         try:
@@ -212,7 +207,11 @@ class CmdlineTool(CmdlineTool):
         return Context(macro_library)
 
     def to_html(self, outfile, source):
-        return to_html(outfile, source, self.context)
+        context = self.default_context()
+        parser = WikiTextParser()
+        compiler = HTMLCompiler(context, outfile)
+        compiler.compile(parser, source)
+
 
 def cmdline_main(context:Context=None):
     cmdline_tool = CmdlineTool(context)
