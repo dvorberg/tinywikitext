@@ -42,6 +42,10 @@ class RAWMacro(Macro):
         raise NotImplementedError()
 
 class LinkMacro(Macro):
+    """
+    Baseclass for those macros that use the syntax of a link (with
+    a Wiki Text “namespace” as for example [[Image:file.jpg]].
+    """
     def html(self, *params):
         raise NotImplementedError()
 
