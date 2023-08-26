@@ -258,6 +258,7 @@ class WikiTextParser(Parser):
                     compiler.line_break()
 
                 case "link":
+                    ensure_paragraph()
                     text, target = token.value
                     compiler.link(text, target or None)
 
