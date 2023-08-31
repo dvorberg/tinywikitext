@@ -32,6 +32,14 @@ class TagMacro(Macro):
     def end_tag(self):
         return f"</{self.name}>"
 
+    def start_searchable_text_block(self, compiler, *args):
+        # compiler.push_weight(...)
+        pass
+
+    def end_searchable_text_block(self, compiler):
+        # compiler.pop_weight()
+        pass
+
 class RAWMacro(Macro):
     """
     Baseclass for macros that process the source text between start and
@@ -40,6 +48,10 @@ class RAWMacro(Macro):
     """
     def html(self, source, **params):
         raise NotImplementedError()
+
+    def add_searchable_text(self, compiler):
+        # compiler.add_text(text, language, weight)
+        pass
 
 class LinkMacro(Macro):
     """
