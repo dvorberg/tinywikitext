@@ -41,8 +41,13 @@ class HTMLCompiler(WikiTextCompiler, HTMLCompiler_mixin):
         self.begin_html_document()
         self.current_list = None
 
-    def characters(self, s:str):
+    def end_document(self):
+        self.end_html_document()
+
+    def _characters(self, s:str):
         self.print(escape_html(s), end="")
+    word = _characters
+    other_characters = _characters
 
     def line_break(self): self.print("<br />", end="")
     def begin_paragraph(self): self.open("p")
@@ -203,13 +208,12 @@ class ListManager(object):
         self.root.write_to(self.compiler)
 
 class CmdlineTool(CmdlineTool):
-    def default_context(self):
-        return Context(macro_library)
+    def make_context(self, extra_context):
+        self.context = Context(macro_library)
 
     def to_html(self, outfile, source):
-        context = self.default_context()
         parser = WikiTextParser()
-        compiler = HTMLCompiler(context, outfile)
+        compiler = HTMLCompiler(self.context, outfile)
         compiler.compile(parser, source)
 
 
