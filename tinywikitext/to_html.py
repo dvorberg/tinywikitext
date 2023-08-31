@@ -15,7 +15,7 @@
 import sys, os, io, copy
 from html import escape as escape_html
 
-from tinymarkup.compiler import HTMLCompiler_mixin
+from tinymarkup.writer import HTMLWriter
 from tinymarkup.context import Context
 from tinymarkup.exceptions import InternalError
 from tinymarkup.cmdline import CmdlineTool
@@ -31,43 +31,43 @@ def to_html(wikitext, context:Context=None):
     compiler.compile(parser, wikitext)
     return outfile.getvalue()
 
-class HTMLCompiler(WikiTextCompiler, HTMLCompiler_mixin):
+class HTMLCompiler(WikiTextCompiler):
     def __init__(self, context, output):
         WikiTextCompiler.__init__(self, context)
-        HTMLCompiler_mixin.__init__(self, output)
+        self.writer = HTMLWriter(output, self.context.root_language)
 
     def begin_document(self, lexer):
         super().begin_document(lexer)
-        self.begin_html_document()
+        self.writer.begin_html_document()
         self.current_list = None
 
     def end_document(self):
-        self.end_html_document()
+        self.writer.end_html_document()
 
     def _characters(self, s:str):
-        self.print(escape_html(s), end="")
+        self.writer.print(escape_html(s), end="")
     word = _characters
     other_characters = _characters
 
-    def line_break(self): self.print("<br />", end="")
-    def begin_paragraph(self): self.open("p")
-    def end_paragraph(self): self.close("p")
-    def begin_italic(self): self.open("i")
-    def end_italic(self): self.close("i")
-    def begin_bold(self): self.open("b")
-    def end_bold(self): self.close("b")
-    def horizontal_line(self): self.print("<hr />")
-    def begin_heading(self, level:int): self.open(f"h{level}")
-    def end_heading(self, level:int): self.close(f"h{level}")
-    def begin_definition_list(self): self.open("dl")
-    def end_definition_list(self): self.close("dl")
-    def begin_definition_term(self): self.open("dt")
-    def end_definition_term(self): self.close("dt")
-    def begin_definition_def(self): self.open("dd")
-    def end_definition_def(self): self.close("dd")
+    def line_break(self): self.writer.print("<br />")
+    def begin_paragraph(self): self.writer.open("p")
+    def end_paragraph(self): self.writer.close("p")
+    def begin_italic(self): self.writer.open("i")
+    def end_italic(self): self.writer.close("i")
+    def begin_bold(self): self.writer.open("b")
+    def end_bold(self): self.writer.close("b")
+    def horizontal_line(self): self.writer.print("<hr />")
+    def begin_heading(self, level:int): self.writer.open(f"h{level}")
+    def end_heading(self, level:int): self.writer.close(f"h{level}")
+    def begin_definition_list(self): self.writer.open("dl")
+    def end_definition_list(self): self.writer.close("dl")
+    def begin_definition_term(self): self.writer.open("dt")
+    def end_definition_term(self): self.writer.close("dt")
+    def begin_definition_def(self): self.writer.open("dd")
+    def end_definition_def(self): self.writer.close("dd")
 
     def link(self, text, target):
-        self.print(self.context.html_link_element(target, text))
+        self.writer.print(self.context.html_link_element(target, text), end="")
 
     def begin_list_item(self, signature):
         try:
@@ -87,29 +87,29 @@ class HTMLCompiler(WikiTextCompiler, HTMLCompiler_mixin):
         self.current_list = None
 
     def begin_tag_macro(self, macro, params):
-        self.print(macro.start_tag(**params), end=macro.end)
+        self.writer.print(macro.start_tag(**params), end=macro.end)
 
     def end_tag_macro(self, macro):
-        self.print(macro.end_tag(), end=macro.end)
+        self.writer.print(macro.end_tag(), end=macro.end)
 
     def process_raw_macro(self, macro, source, params):
-        self.print(macro.html(source, **params), end="")
+        self.writer.print(macro.html(source, **params), end="")
 
     def process_link_macro(self, macro, params):
-        self.print(macro.html(*params), end="")
+        self.writer.print(macro.html(*params), end="")
 
 class Item(object):
     def __init__(self, parent):
         self.parent = parent
         self.output = io.StringIO()
-        self.compiler.output = self.output
+        self.compiler.writer.output = self.output
 
     @property
     def compiler(self):
         return self.parent.compiler
 
     def write_to(self, compiler):
-        compiler.print(self.output.getvalue(), end="")
+        compiler.writer.print(self.output.getvalue(), end="")
 
 class List(object):
     def __init__(self, parent, type):
@@ -158,27 +158,27 @@ class List(object):
         self.items.append(Item(self))
 
     def write_to(self, compiler):
-        compiler.open(self.tag)
+        compiler.writer.open(self.tag)
 
         for item, nitem in zip(self.items, self.items[1:] + [None,]):
             if isinstance(item, Item):
-                compiler.open("li")
+                compiler.writer.open("li")
             else:
-                compiler.print()
+                compiler.writer.print()
 
             item.write_to(compiler)
 
             if isinstance(nitem, Item) or nitem is None:
-                compiler.close("li")
+                compiler.writer.close("li")
 
-        compiler.close(self.tag)
+        compiler.writer.close(self.tag)
 
 
 class ListManager(object):
     def __init__(self, compiler):
         self.compiler = compiler
-        self.original_output = compiler.output
-        compiler.output = None
+        self.original_output = compiler.writer.output
+        compiler.writer.output = None
         self.parent = None
         self.level = -1
         self.root = None
@@ -204,7 +204,7 @@ class ListManager(object):
         list.create_item()
 
     def finalize(self):
-        self.compiler.output = self.original_output
+        self.compiler.writer.output = self.original_output
         self.root.write_to(self.compiler)
 
 class CmdlineTool(CmdlineTool):
