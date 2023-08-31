@@ -385,7 +385,7 @@ class WikiTextParser(Parser):
                     process_macro_call(token, name, params)
 
                 case "whitespace":
-                    compiler.characters(" ")
+                    compiler.other_characters(" ")
 
                 case "eols":
                     nlcount = token.value.count("\n")
@@ -423,14 +423,19 @@ class WikiTextParser(Parser):
 
                     elif nlcount == 1:
                         # Single newlines are still whitespace.
-                        compiler.characters(" ")
+                        compiler.other_characters(" ")
                     else:
                         # Double newline.
                         paragraph_break()
 
-                case "word" | "text":
+                case "word":
                     ensure_paragraph()
-                    compiler.characters(token.value)
+                    compiler.word(token.value)
+
+                case "other_characters":
+                    ensure_paragraph()
+                    compiler.other_characters(token.value)
+
 
         # Make sure the last paragraph is closed in case
         # there is no whitespace at the end of the file.
