@@ -35,14 +35,14 @@ class HTMLCompiler(WikiTextCompiler):
     def __init__(self, context, output):
         WikiTextCompiler.__init__(self, context)
         self.writer = HTMLWriter(output, self.context.root_language)
+        self.writer.write_root_language_tag()
 
     def begin_document(self, lexer):
         super().begin_document(lexer)
-        self.writer.begin_html_document()
         self.current_list = None
 
     def end_document(self):
-        self.writer.end_html_document()
+        self.writer.close_all()
 
     def _characters(self, s:str):
         self.writer.print(escape_html(s), end="")
