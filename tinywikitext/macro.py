@@ -32,7 +32,7 @@ class TagMacro(Macro):
     def end_tag(self):
         return f"</{self.name}>"
 
-    def start_searchable_text_block(self, compiler, *args):
+    def start_searchable_text_block(self, compiler, *args, **kw):
         # compiler.push_weight(...)
         pass
 
@@ -49,7 +49,7 @@ class RAWMacro(Macro):
     def html(self, source, **params):
         raise NotImplementedError()
 
-    def add_searchable_text(self, compiler):
+    def add_searchable_text(self, writer, *args):
         # compiler.write(text, language, weight)
         pass
 
@@ -60,6 +60,10 @@ class LinkMacro(Macro):
     """
     def html(self, *params):
         raise NotImplementedError()
+
+    def add_searchable_text(self, writer, *args):
+        # compiler.write(text, language, weight)
+        pass
 
 class blockquote(TagMacro):
     environments = { "block" }
