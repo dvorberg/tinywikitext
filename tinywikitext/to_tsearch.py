@@ -24,14 +24,14 @@ class TSearchCompiler(WikiTextCompiler):
         WikiTextCompiler.__init__(self, context)
         self.writer = TSearchWriter(output, self.context.root_language)
 
-    # characters() and end_document() are implemented by
-    # TSearchCompiler_mixin. No need to repeat them here.
-
     def word(self, s:str):
         self.writer.word(s)
 
     def other_characters(self, s:str):
         pass
+
+    def end_document(self):
+        self.writer.end_document()
 
     def line_break(self): pass
     def begin_paragraph(self): pass
