@@ -252,7 +252,7 @@ class WikiTextParser(Parser):
                     elif start_ws or end_ws:
                         # If there is whitespace around the comment,
                         # it is rendered as a single space.
-                        compiler.characters(" ")
+                        compiler.other_characters(" ")
 
                 case "br":
                     compiler.line_break()
