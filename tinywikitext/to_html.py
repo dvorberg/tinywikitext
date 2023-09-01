@@ -67,7 +67,8 @@ class HTMLCompiler(WikiTextCompiler):
     def end_definition_def(self): self.writer.close("dd")
 
     def link(self, text, target):
-        self.writer.print(self.context.html_link_element(target, text), end="")
+        self.writer.print(self.context.html_link_element(
+            target or text, text or target), end="")
 
     def begin_list_item(self, signature):
         try:
