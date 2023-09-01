@@ -12,7 +12,7 @@
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 # GNU General Public License for more details.
 
-from tinymarkup.compiler import TSearchWriter
+from tinymarkup.writer import TSearchWriter
 from tinymarkup.context import Context
 
 from .parser import WikiTextParser
