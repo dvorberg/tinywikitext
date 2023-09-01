@@ -50,7 +50,7 @@ class RAWMacro(Macro):
         raise NotImplementedError()
 
     def add_searchable_text(self, compiler):
-        # compiler.add_text(text, language, weight)
+        # compiler.write(text, language, weight)
         pass
 
 class LinkMacro(Macro):
