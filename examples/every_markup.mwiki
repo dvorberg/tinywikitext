@@ -2,18 +2,18 @@
 
 An example of a definition list:
 
-: Term
-; Definition of that term.
+; Term
+: Definition of that term.
 
-: Word
-; Well, not every word is a “term”. Some are other stuff. 
+; Word
+: Well, not every word is a “term”. Some are other stuff. 
 
 What follows is a definition list without empty lines between term/def pairs:
 
-: Term 1
-; Def 1
-: Term 2
-; Def 2
+; Term 1
+: Def 1
+; Term 2
+: Def 2
 
 This is legal.
 

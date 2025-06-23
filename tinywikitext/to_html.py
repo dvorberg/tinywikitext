@@ -1,4 +1,4 @@
-# Copyright (C) 2023 Diedrich Vorberg
+# Copyright (C) 2023–25 Diedrich Vorberg
 #
 # Contact: diedrich@tux4web.de
 #
@@ -15,7 +15,7 @@
 import sys, os, io, copy
 from html import escape as escape_html
 
-from tinymarkup.compiler import HTMLCompiler_mixin
+from tinymarkup.writer import HTMLWriter
 from tinymarkup.context import Context
 from tinymarkup.exceptions import InternalError
 from tinymarkup.cmdline import CmdlineTool
@@ -31,18 +31,24 @@ def to_html(wikitext, context:Context=None):
     compiler.compile(parser, wikitext)
     return outfile.getvalue()
 
-class HTMLCompiler(WikiTextCompiler, HTMLCompiler_mixin):
+class HTMLCompiler(WikiTextCompiler):
     def __init__(self, context, output):
         WikiTextCompiler.__init__(self, context)
-        HTMLCompiler_mixin.__init__(self, output)
+        self.writer = HTMLWriter(output, context.root_language)
 
-    def begin_document(self, lexer):
-        super().begin_document(lexer)
-        self.begin_html_document()
+        self.open = self.writer.open
+        self.close = self.writer.close
+        self.print = self.writer.print
+
+    def begin_document(self, parser):
+        super().begin_document(parser)
         self.current_list = None
 
-    def characters(self, s:str):
+    def other_characters(self, s:str):
         self.print(escape_html(s), end="")
+
+    def word(self, s:str):
+        self.print(s, end="")
 
     def line_break(self): self.print("<br />", end="")
     def begin_paragraph(self): self.open("p")
@@ -97,14 +103,14 @@ class Item(object):
     def __init__(self, parent):
         self.parent = parent
         self.output = io.StringIO()
-        self.compiler.output = self.output
+        self.compiler.writer.output = self.output
 
     @property
     def compiler(self):
         return self.parent.compiler
 
     def write_to(self, compiler):
-        compiler.print(self.output.getvalue(), end="")
+        print(self.output.getvalue(), end="", file=compiler.writer.output)
 
 class List(object):
     def __init__(self, parent, type):
@@ -168,12 +174,11 @@ class List(object):
 
         compiler.close(self.tag)
 
-
 class ListManager(object):
     def __init__(self, compiler):
         self.compiler = compiler
-        self.original_output = compiler.output
-        compiler.output = None
+        self.original_output = compiler.writer.output
+        compiler.writer.output = None
         self.parent = None
         self.level = -1
         self.root = None
@@ -199,19 +204,17 @@ class ListManager(object):
         list.create_item()
 
     def finalize(self):
-        self.compiler.output = self.original_output
+        self.compiler.writer.output = self.original_output
         self.root.write_to(self.compiler)
 
 class CmdlineTool(CmdlineTool):
-    def default_context(self):
-        return Context(macro_library)
-
     def to_html(self, outfile, source):
-        context = self.default_context()
         parser = WikiTextParser()
-        compiler = HTMLCompiler(context, outfile)
+        compiler = HTMLCompiler(self.context, outfile)
         compiler.compile(parser, source)
 
+    def make_context(self):
+        return self._context_class(macro_library)
 
 def cmdline_main(context:Context=None):
     cmdline_tool = CmdlineTool(context)

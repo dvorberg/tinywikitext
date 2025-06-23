@@ -88,7 +88,7 @@ tokens = (
 
     "whitespace",
     "word",
-    "text"
+    "other_characters"
 )
 
 def group(token, *group_names):
@@ -170,7 +170,7 @@ def t_htmltag_end(t):
 
 t_whitespace = r"[ \t]+"
 t_word = r"\w[\w \t]*\w"
-t_text = r"."
+t_other_characters = r"."
 
 def t_error(t):
     raise LexerSetupError(repr(t), location=Location.from_baselexer(t.lexer))

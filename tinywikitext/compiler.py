@@ -17,8 +17,11 @@ from tinymarkup.compiler import Compiler
 from tinymarkup.macro import Macro, MacroLibrary
 
 class WikiTextCompiler(Compiler):
-    def characters(self, s:str):
-        print("characters", repr(s))
+    def word(self, s:str):
+        print("word", repr(s))
+
+    def other_characters(self, s:str):
+        print("word", repr(s))
 
     def line_break(self):
         print("line_break")
@@ -43,9 +46,6 @@ class WikiTextCompiler(Compiler):
 
     def link(self, text, target):
         print("link", repr(text), repr(target))
-
-    def call_macro(self, name, params):
-        print("call_macro", repr(name), repr(params))
 
     def horizontal_line(self):
         print("horizontal_line")
