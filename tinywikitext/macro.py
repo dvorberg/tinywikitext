@@ -1,4 +1,4 @@
-# Copyright (C) 2023 Diedrich Vorberg
+# Copyright (C) 2023–25 Diedrich Vorberg
 #
 # Contact: diedrich@tux4web.de
 #
