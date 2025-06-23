@@ -23,14 +23,14 @@ The word became flesh.
 
 Paragraph with <s>strikethrough</s> text provided by an (allowed) HTML tag.
 
-<bibtex>
+<!--<bibtex>
 @book{James198,
       author = "Henry James",
       title = "The Turn of the Screw",
       publisher = "Penguin Book, New York",
       year = "1994 (First published 1898)"
 }
-</bibtex>
+</bibtex>-->
 
 
 == Section ==
