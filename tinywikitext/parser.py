@@ -1,4 +1,4 @@
-# Copyright (C) 2023 Diedrich Vorberg
+# Copyright (C) 2023–25 Diedrich Vorberg
 #
 # Contact: diedrich@tux4web.de
 #
@@ -203,7 +203,6 @@ class WikiTextParser(Parser):
                 self.in_paragraph = True
 
         for token in self.lexer.tokenize(source):
-            #print("--", token)
             match token.type:
                 case "bolditalic":
                     ensure_paragraph()
