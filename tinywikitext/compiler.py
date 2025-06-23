@@ -21,7 +21,7 @@ class WikiTextCompiler(Compiler):
         print("word", repr(s))
 
     def other_characters(self, s:str):
-        print("word", repr(s))
+        print("other_characters", repr(s))
 
     def line_break(self):
         print("line_break")
