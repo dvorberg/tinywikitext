@@ -16,6 +16,10 @@ from tinymarkup.exceptions import UnsuitableMacro
 from tinymarkup.macro import Macro, MacroLibrary
 from tinymarkup.utils import html_start_tag
 
+from ll.xist import xsc
+from ll.xist.ns import html
+
+
 class TagMacro(Macro):
     """
     Baseclass for macros that provide start and end tags with regular
@@ -76,6 +80,27 @@ class s(TagMacro):
 
 class u(TagMacro):
     environments = { "inline" }
+
+class Bild(LinkMacro):
+    def html(self, image_filename=None):
+        if image_filename:
+            if self.environment == "block":
+                return html.figure(
+                    html.img(class_="rounded preview-image preview-1800",
+                             **{"data-filename": image_filename}),
+                    class_="figure tinywikitext-figure")
+            else:
+                return ( f'<img class_="rounded preview-image preview-1800" '
+                         f'data-filename="{image_filename}" />')
+
+class bibtex(TagMacro):
+    def start_tag(self, *args, **kw):
+        return '<div class="bibtex">'
+
+    def end_tag(self):
+        return '</div>'
+
+
 
 macro_library = MacroLibrary()
 macro_library.register_module(globals())

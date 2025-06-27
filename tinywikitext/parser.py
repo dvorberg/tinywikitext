@@ -41,12 +41,6 @@ listitem_is_next_re = re.compile(lextokens.t_list_item.__doc__)
 next_is_newline_re = re.compile(r"[ \t]*\n")
 
 class WikiTextParser(Parser):
-    """
-    Base class for content parser showing the required API.
-
-    You can also instantiate this by itself to show a trace of the
-    tokens from the lexer.
-    """
     def __init__(self):
         super().__init__(wikitext_base_lexer)
 
